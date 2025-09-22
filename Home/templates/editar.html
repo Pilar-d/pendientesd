@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-12 col-lg-8">
+<div class="card shadow-sm">
+<div class="card-body">
+<h5 class="card-title mb-3">Editar TAREA</h5>
+<form method="post" class="vstack gap-2">
+    <div class="mb-2">
+        <label class="form-label">Título</label>
+        <input type="text" name="titulo" class="form-control" value="{{ tarea.titulo }}" required>
+    </div>
+    <div class="mb-2">
+        <label class="form-label">Descripción</label>
+        <textarea name="descripcion" class="form-control" rows="4">{{ tarea.descripcion }}</textarea>
+    </div>
+    <div class="mb-2">
+        <label class="form-label">Fecha límite</label>
+        <input type="date" name="fecha_limite" class="form-control" 
+               value="{{ tarea.fecha_limite.strftime('%Y-%m-%d') if tarea.fecha_limite }}" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Categoría</label>
+        <select name="categoria" class="form-select" required>
+            <option value="academica" {% if tarea.categoria == 'academica' %}selected{% endif %}>Tareas académicas</option>
+            <option value="laboral" {% if tarea.categoria == 'laboral' %}selected{% endif %}>Tareas laborales</option>
+            <option value="tiempo_libre" {% if tarea.categoria == 'tiempo_libre' %}selected{% endif %}>Tareas tiempo libre</option>
+        </select>
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" href="{{ url_for('index') }}">Cancelar</a>
+        <button class="btn btn-primary" type="submit">Guardar cambios</button>
+    </div>
+</form>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+// Si necesitas JavaScript específico para la edición, va aquí
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('Página de edición cargada');
+  // Aquí puedes agregar cualquier funcionalidad específica para la edición
+});
+</script>
+
+{% endblock %}

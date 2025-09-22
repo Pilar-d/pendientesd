@@ -1,14 +1,486 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Primer documento</title>
-    <link rel="stylesheet" href="{% static 'style.css' %}">
-</head>
-<body>
-    <h1>PRIMER PAGINA HTML HOME</h1>
+{% extends 'base.html' %}
+{% block content %}
+
+{% if username %}
+  <!-- Cabecera con usuario y logout -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5>Hola, {{ username }}</h5>
+    <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm">Cerrar sesión</a>
+  </div>
+{% endif %}
+
+<!-- Mensajes flash -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<div class="row">
+  <!-- Columna izquierda para formulario y listado -->
+  <div class="col-12 col-lg-7">
+
+    <!-- FORMULARIO PARA CREAR TAREA -->
+    <div class="card mb-3 shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title mb-3">Crear nueva tarea</h5>
+        <form method="post" action="{{ url_for('crear') }}" id="form-tarea">
+          <div class="mb-2">
+            <input type="text" name="titulo" class="form-control" placeholder="Título de la tarea" required>
+          </div>
+          <div class="mb-2">
+            <textarea name="descripcion" class="form-control" placeholder="Descripción (opcional)" rows="3"></textarea>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Fecha límite</label>
+            <input type="date" name="fecha_limite" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Categoría</label>
+            <select name="categoria" class="form-select" required>
+              <option value="">Seleccionar categoría</option>
+              <option value="academica">Tareas académicas</option>
+              <option value="laboral">Tareas laborales</option>
+              <option value="tiempo_libre">Tareas tiempo libre</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary">Agregar tarea</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- FILTRO DE LISTADO -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h5 class="m-0">Listado</h5>
+      <form method="get" class="d-flex gap-2">
+        <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Buscar...">
+        <select name="orden" class="form-select">
+          <option value="recientes" {% if orden=='recientes' %}selected{% endif %}>Más recientes</option>
+          <option value="antiguas" {% if orden=='antiguas' %}selected{% endif %}>Más antiguas</option>
+          <option value="titulo" {% if orden=='titulo' %}selected{% endif %}>Por título</option>
+        </select>
+        <button class="btn btn-outline-secondary" type="submit">Filtrar</button>
+      </form>
+    </div>
+
+    <!-- LISTADO DE TAREAS -->
+    <ul class="list-group shadow-sm mb-4">
+      {% for t in tareas %}
+      <li class="list-group-item d-flex align-items-start justify-content-between">
+        <div class="me-3 flex-grow-1">
+          <div class="form-check">
+            <form method="post" action="{{ url_for('toggle', tarea_id=t.id) }}">
+              <input class="form-check-input" type="checkbox" id="t{{t.id}}"
+                     onChange="this.form.submit()" {% if t.completada %}checked{% endif %}>
+              <label class="form-check-label" for="t{{t.id}}">
+                <strong class="{% if t.completada %}text-decoration-line-through text-muted{% endif %}">
+                  {{ t.titulo }}
+                </strong>
+                <span class="badge bg-{{ 'info' if t.categoria == 'academica' else 'warning' if t.categoria == 'laboral' else 'success' }} ms-2">
+                  {{ 'Académica' if t.categoria == 'academica' else 'Laboral' if t.categoria == 'laboral' else 'Tiempo libre' }}
+                </span>
+              </label>
+            </form>
+          </div>
+          {% if t.descripcion %}
+          <div class="text-muted small mt-1 {{ 'text-decoration-line-through' if t.completada }} text-break">
+            {{ t.descripcion }}
+          </div>
+          {% endif %}
+          <div class="small text-secondary mt-1">Creada: {{ t.creada_en.strftime('%d-%m-%Y %H:%M') }}</div>
+          {% if t.fecha_limite %}
+          <div class="small mt-1">
+            <span class="badge bg-{{ 'danger' if t.fecha_limite < hoy else 'primary' }}">
+              Límite: {{ t.fecha_limite.strftime('%d-%m-%Y') }}
+            </span>
+          </div>
+          {% endif %}
+        </div>
+        <div class="btn-group">
+          <a href="{{ url_for('editar', tarea_id=t.id) }}" class="btn btn-sm btn-outline-primary">Editar</a>
+          <form method="post" action="{{ url_for('eliminar', tarea_id=t.id) }}" onsubmit="return confirm('¿Eliminar esta tarea?');">
+            <button class="btn btn-sm btn-outline-danger" type="submit">Eliminar</button>
+          </form>
+        </div>
+      </li>
+      {% else %}
+      <li class="list-group-item text-center text-muted">No hay tareas</li>
+      {% endfor %}
+    </ul>
+
+  </div>
+
+  <!-- Columna derecha para el calendario -->
+  <div class="col-12 col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title mb-3">Calendario de Tareas</h5>
+        <div id="calendario">
+          <!-- Aquí se generará el calendario con JavaScript -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tooltip para mostrar tareas al pasar el mouse -->
+<div id="tooltip-tareas" class="position-absolute bg-light border rounded p-2 shadow" style="display: none; z-index: 1050;"></div>
+
+<!-- Elemento para pasar datos del servidor al cliente -->
+<div id="tareas-data" style="display: none;">
+  {% for t in tareas %}
+  <div class="tarea-item" 
+       data-titulo="{{ t.titulo }}" 
+       data-descripcion="{{ t.descripcion }}" 
+       data-fecha_limite="{{ t.fecha_limite.strftime('%Y-%m-%d') if t.fecha_limite }}" 
+       data-categoria="{{ t.categoria }}" 
+       data-completada="{{ 'true' if t.completada else 'false' }}">
+  </div>
+  {% endfor %}
+</div>
+
+<style>
+  .calendar {
+    width: 100%;
+  }
+  .calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+  }
+  .calendar-day {
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+    cursor: pointer;
+    position: relative;
+    font-size: 0.9rem;
+  }
+  .calendar-day.header {
+    font-weight: bold;
+    background-color: #f8f9fa;
+    cursor: default;
+  }
+  .calendar-day.empty {
+    background-color: transparent;
+    cursor: default;
+  }
+  .calendar-day.current {
+    background-color: #e3f2fd;
+    font-weight: bold;
+  }
+  .calendar-day.task {
+    background-color: #fff3cd;
+  }
+  .calendar-day.holiday {
+    color: red;
+    font-weight: bold;
+  }
+  .calendar-day.free {
+    background-color: #d4edda;
+  }
+  .day-number {
+    font-size: 14px;
+  }
+  .task-dot {
+    position: absolute;
+    bottom: 2px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+  .academica-dot {
+    background-color: #0dcaf0;
+  }
+  .laboral-dot {
+    background-color: #ffc107;
+  }
+  .tiempo_libre-dot {
+    background-color: #198754;
+  }
+  .text-break {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+</style>
+
+<script>
+  // Feriados de Chile (2023 como ejemplo)
+  const feriadosChile = [
+    '2023-01-01', // Año Nuevo
+    '2023-04-07', // Viernes Santo
+    '2023-04-08', // Sábado Santo
+    '2023-05-01', // Día del Trabajo
+    '2023-05-21', // Día de las Glorias Navales
+    '2023-06-07', // Asalto y Toma del Morro de Arica
+    '2023-06-21', // Día Nacional de los Pueblos Indígenas
+    '2023-06-26', // San Pedro y San Pablo
+    '2023-07-16', // Virgen del Carmen
+    '2023-08-15', // Asunción de la Virgen
+    '2023-09-18', // Independencia Nacional
+    '2023-09-19', // Día de las Glorias del Ejército
+    '2023-10-09', // Encuentro de Dos Mundos
+    '2023-10-27', // Día de las Iglesias Evangélicas y Protestantes
+    '2023-11-01', // Día de Todos los Santos
+    '2023-12-08', // Inmaculada Concepción
+    '2023-12-25'  // Navidad
+  ];
+
+  // Función para obtener tareas desde el DOM
+  function obtenerTareas() {
+    const tareas = [];
+    const tareaElements = document.querySelectorAll('.tarea-item');
     
-</body>
-</html>
+    tareaElements.forEach(element => {
+      const titulo = element.getAttribute('data-titulo');
+      const descripcion = element.getAttribute('data-descripcion');
+      const fecha_limite = element.getAttribute('data-fecha_limite');
+      const categoria = element.getAttribute('data-categoria');
+      const completada = element.getAttribute('data-completada') === 'true';
+      
+      if (fecha_limite) {
+        tareas.push({
+          titulo,
+          descripcion,
+          fecha_limite,
+          categoria,
+          completada
+        });
+      }
+    });
+    
+    return tareas;
+  }
+
+  // Almacenar el mes y año actual para regenerar el calendario después de una acción
+  let currentYear = new Date().getFullYear();
+  let currentMonth = new Date().getMonth();
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar calendario
+    generarCalendario(currentYear, currentMonth);
+    
+    // Configurar tooltip
+    const tooltip = document.getElementById('tooltip-tareas');
+    
+    document.addEventListener('mousemove', function(e) {
+      if (tooltip.style.display === 'block') {
+        tooltip.style.top = (e.pageY + 10) + 'px';
+        tooltip.style.left = (e.pageX + 10) + 'px';
+      }
+    });
+
+    // SOLUCIÓN: Usar solo un manejador de evento para el formulario
+    const formTarea = document.getElementById('form-tarea');
+    if (formTarea) {
+      formTarea.addEventListener('submit', function(e) {
+        // Prevenir el envío tradicional
+        e.preventDefault();
+        
+        // Validar formulario
+        const titulo = formTarea.querySelector('input[name="titulo"]').value.trim();
+        const fecha_limite = formTarea.querySelector('input[name="fecha_limite"]').value;
+        const categoria = formTarea.querySelector('select[name="categoria"]').value;
+        
+        if (!titulo || !fecha_limite || !categoria) {
+          alert('Por favor, complete todos los campos requeridos');
+          return;
+        }
+        
+        // Crear FormData
+        const formData = new FormData(formTarea);
+        
+        // Enviar con Fetch API
+        fetch("{{ url_for('crear') }}", {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => {
+          if (response.ok) {
+            // Recargar la página para ver los cambios
+            window.location.reload();
+          } else {
+            response.text().then(text => {
+              alert('Error al crear la tarea: ' + text);
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error de conexión al crear la tarea');
+        });
+      });
+    }
+
+    // Verificar si necesitamos regenerar el calendario después de una recarga
+    if (localStorage.getItem('calendarioRegenerar') === 'true') {
+      localStorage.removeItem('calendarioRegenerar');
+      // Pequeña demora para asegurar que los datos estén actualizados
+      setTimeout(() => {
+        generarCalendario(currentYear, currentMonth);
+      }, 100);
+    }
+  });
+
+  function generarCalendario(year, month) {
+    currentYear = year;
+    currentMonth = month;
+    
+    const calendarioDiv = document.getElementById('calendario');
+    const date = new Date(year, month, 1);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Obtener tareas
+    const tareas = obtenerTareas();
+    
+    // Obtener primer día del mes y último día del mes
+    const firstDay = new Date(year, month, 1).getDay();
+    const lastDate = new Date(year, month + 1, 0).getDate();
+    
+    // Ajustar para que la semana empiece el lunes (Chile)
+    const adjustedFirstDay = firstDay === 0 ? 6 : firstDay - 1;
+    
+    // Nombres de días (empezando por lunes)
+    const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    
+    // Nombres de meses
+    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    
+    let html = `
+      <div class="calendar">
+        <div class="calendar-header">
+          <button class="btn btn-sm btn-outline-secondary" onclick="cambiarMes(-1)">←</button>
+          <h6 class="m-0">${months[month]} ${year}</h6>
+          <button class="btn btn-sm btn-outline-secondary" onclick="cambiarMes(1)">→</button>
+        </div>
+        <div class="calendar-grid">
+    `;
+    
+    // Encabezados de días
+    for (let i = 0; i < 7; i++) {
+      html += `<div class="calendar-day header">${days[i]}</div>`;
+    }
+    
+    // Días vacíos al inicio
+    for (let i = 0; i < adjustedFirstDay; i++) {
+      html += `<div class="calendar-day empty"></div>`;
+    }
+    
+    // Días del mes
+    for (let day = 1; day <= lastDate; day++) {
+      // Formatear día con dos dígitos
+      const dayFormatted = day < 10 ? `0${day}` : day;
+      const monthFormatted = month + 1 < 10 ? `0${month + 1}` : month + 1;
+      const dateString = `${year}-${monthFormatted}-${dayFormatted}`;
+      
+      const currentDate = new Date(year, month, day);
+      const isToday = currentDate.toDateString() === today.toDateString();
+      const isHoliday = feriadosChile.includes(dateString);
+      
+      // Obtener tareas para este día (solo las no completadas)
+      const tareasDia = tareas.filter(t => t.fecha_limite === dateString && !t.completada);
+      
+      let dayClass = 'calendar-day';
+      if (isToday) dayClass += ' current';
+      if (tareasDia.length > 0) dayClass += ' task';
+      if (isHoliday) dayClass += ' holiday';
+      if (tareasDia.length === 0 && !isToday && !isHoliday) dayClass += ' free';
+      
+      html += `<div class="${dayClass}" 
+                     onmouseover="mostrarTareas(event, '${dateString}')" 
+                     onmouseout="ocultarTareas()">`;
+      html += `<span class="day-number">${day}</span>`;
+      
+      // Mostrar puntos según categorías de tareas
+      if (tareasDia.length > 0) {
+        const categorias = {};
+        tareasDia.forEach(t => {
+          categorias[t.categoria] = (categorias[t.categoria] || 0) + 1;
+        });
+        
+        // Mostrar hasta 3 puntos como máximo
+        let puntosMostrados = 0;
+        Object.keys(categorias).forEach(cat => {
+          if (puntosMostrados < 3) {
+            html += `<div class="task-dot ${cat}-dot" title="${categorias[cat]} tarea(s) ${cat}"></div>`;
+            puntosMostrados++;
+          }
+        });
+      }
+      
+      html += `</div>`;
+    }
+    
+    html += `</div></div>`;
+    calendarioDiv.innerHTML = html;
+  }
+  
+  function cambiarMes(delta) {
+    const currentTitle = document.querySelector('.calendar-header h6').textContent;
+    const [monthName, year] = currentTitle.split(' ');
+    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    
+    let newMonth = months.indexOf(monthName);
+    let newYear = parseInt(year);
+    
+    newMonth += delta;
+    
+    if (newMonth < 0) {
+      newMonth = 11;
+      newYear--;
+    } else if (newMonth > 11) {
+      newMonth = 0;
+      newYear++;
+    }
+    
+    generarCalendario(newYear, newMonth);
+  }
+  
+  function mostrarTareas(event, fecha) {
+    const tareas = obtenerTareas();
+    const tareasDia = tareas.filter(t => t.fecha_limite === fecha && !t.completada);
+    
+    if (tareasDia.length > 0) {
+      const tooltip = document.getElementById('tooltip-tareas');
+      let html = `<strong>Tareas para ${fecha.split('-').reverse().join('-')}:</strong><ul class="mb-0 ps-3">`;
+      
+      tareasDia.forEach(t => {
+        // Mostrar solo el título en el tooltip
+        html += `<li>${t.titulo} (${t.categoria.replace('_', ' ')})</li>`;
+      });
+      
+      html += '</ul>';
+      tooltip.innerHTML = html;
+      tooltip.style.display = 'block';
+      tooltip.style.top = (event.pageY + 10) + 'px';
+      tooltip.style.left = (event.pageX + 10) + 'px';
+    }
+  }
+  
+  function ocultarTareas() {
+    document.getElementById('tooltip-tareas').style.display = 'none';
+  }
+
+  // Función para forzar la actualización del calendario
+  function actualizarCalendario() {
+    generarCalendario(currentYear, currentMonth);
+  }
+</script>
+
+{% endblock %}
