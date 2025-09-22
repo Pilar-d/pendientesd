@@ -1,21 +1,14 @@
-from flask import Flask, jsonify
+# api/index.py
+from flask import Flask
 
 app = Flask(__name__)
 
 @app.route('/')
-def home():
-    return jsonify({"status": "ok", "message": "Funcionando en Vercel"})
+def hello():
+    return 'Hello from Vercel Flask!'
 
-@app.route('/api/health')
-def health():
-    return jsonify({"status": "healthy"})
-
-# IMPORTANTE: Para Vercel Functions
+# Esto es crucial para Vercel
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
 else:
-    # Para entornos serverless
-    import os
-    if os.environ.get('VERCEL'):
-        # Exporta la app para Vercel
-        application = app
+    application = app
