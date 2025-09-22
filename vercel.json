@@ -1,0 +1,14 @@
+{
+    "builds": [
+        { 
+            "src": "pendientes/wsgi.py",
+            "use": "@vercel/python"
+        } 
+    ], 
+    "routes": [
+        {
+            "src": "/(.*)", 
+            "dest": "pendientes/wsgi.py"
+        }
+    ]
+}
