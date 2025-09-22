@@ -6,7 +6,7 @@ app = Flask(__name__)
 def home():
     return jsonify({"status": "ok", "message": "Funcionando en Vercel"})
 
-@app.route('/pendientes/health')
+@app.route('/api/health')
 def health():
     return jsonify({"status": "healthy"})
 
