@@ -1,0 +1,9 @@
+
+{
+  "dependencies": {
+    "flask": "^2.3.3",
+    "python-runtime": "3.9",
+    "werkzeug": "^2.3.7",
+    "gunicorn": "^20.1.0"
+  }
+}
