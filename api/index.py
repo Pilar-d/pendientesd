@@ -1,4 +1,8 @@
 from flask import Flask, jsonify
+from api.manage import app  # importa tu Flask desde manage.py
+
+# Ahora Vercel puede ejecutar "app"
+
 
 app = Flask(__name__)
 
